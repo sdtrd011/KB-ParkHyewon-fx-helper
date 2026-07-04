@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: ko-KR
+
+reviews:
+  profile: chill
+  request_changes_workflow: false
+  high_level_summary: true
+  poem: false
+  instructions: |
+    KB 외환 창구 도우미(kb-parkhyewon-fx-helper)는 React 19 + TypeScript + Vite + FSD 기반 학습/과제용 프로젝트입니다.
+    아래 항목을 중점적으로 리뷰하세요.
+
+    1. FSD 의존 방향: app → pages → widgets → features → entities → shared
+    2. 하위 레이어가 상위 레이어(features/widgets/pages/app)를 import하지 않는지
+    3. 동일 레이어의 서로 다른 슬라이스 간 직접 import 금지 여부
+    4. 슬라이스 public API(index.ts)를 우회하는 deep import 금지 여부
+    5. 계산 로직과 UI 분리: 환전/해외송금 계산식은 entities 또는 shared/lib에 두고, React 컴포넌트에 직접 작성하지 않았는지
+    6. JPY·IDR 100단위 고시환율 처리: unit 100 반영, UI 안내 문구, API 매핑(JPY(100), IDR(100)) 일관성
+    7. API 키 노출 방지: VITE_EXCHANGE_API_KEY 하드코딩, .env 커밋, 로그 출력 금지
+    8. 테스트 유지: calculateExchange·calculateRemittance·storage 등 채점 시나리오 기대값이 의도 없이 변경되지 않았는지
+    9. 문서와 구현 일치: README·docs의 통화 목록(CNH 포함), 계산식, FSD 구조와 코드가 일치하는지
+
+    리뷰 코멘트는 한국어로 작성하세요.
+  path_filters:
+    - "!**/node_modules/**"
+    - "!**/dist/**"
+    - "!**/coverage/**"
+    - "!**/*.lock"
+    - "!**/package-lock.json"
+    - "!**/.env"
+    - "!**/*.log"
+  path_instructions:
+    - path: "src/entities/**"
+      instructions: |
+        entities 레이어는 도메인 타입·순수 계산·저장 로직만 담당합니다.
+        - React UI 컴포넌트를 두지 마세요.
+        - features/widgets/pages/app을 import하지 마세요.
+        - 다른 entities 슬라이스를 직접 import하지 말고 shared/config 등 하위 레이어를 사용하세요.
+        - 환전(calculateExchange)·해외송금(calculateRemittance) 계산식과 반올림 규칙(적용환율 2자리 → 원화 정수)을 준수했는지 확인하세요.
+        - JPY·IDR unit 100 처리가 getCurrencyConfig(shared/config)와 일치하는지 확인하세요.
+        - 기존 Vitest 테스트 기대값 변경이 채점 시나리오에 영향을 주는지 검토하세요.
+    - path: "src/features/**"
+      instructions: |
+        features 레이어는 사용자 행동 단위 UI·상태 관리를 담당합니다.
+        - widgets/pages/app을 import하지 마세요.
+        - 다른 features 슬라이스를 직접 import하지 마세요. (환율 로드 UI는 widgets에서 props로 주입)
+        - 계산 로직은 entities 함수를 호출하고, 컴포넌트 내부에 계산식을 작성하지 않았는지 확인하세요.
+        - fetch는 shared/api를 통해서만 호출하고, UI에서 직접 작성하지 않았는지 확인하세요.
+        - API 실패 시 수동 입력 fallback이 유지되는지 확인하세요.
+    - path: "src/widgets/**"
+      instructions: |
+        widgets 레이어는 여러 features/entities를 조합하는 독립 UI 블록입니다.
+        - pages/app을 import하지 마세요.
+        - 다른 widgets 슬라이스를 직접 import하지 마세요.
+        - load-exchange-rate 등 feature 컴포넌트를 calculate 폼에 props로 전달하는 FSD 조합 패턴을 준수했는지 확인하세요.
+    - path: "src/pages/**"
+      instructions: |
+        pages 레이어는 페이지 단위 화면 구성을 담당합니다.
+        - app을 import하지 마세요.
+        - 페이지에서 직접 계산 로직을 작성하지 않았는지 확인하세요.
+    - path: "src/shared/**"
+      instructions: |
+        shared 레이어는 공용 UI·유틸·설정·API 클라이언트를 담당합니다.
+        - entities/features/widgets/pages/app을 import하지 마세요.
+        - public API(index.ts)를 통해 export하고, deep import를 피했는지 확인하세요.
+        - currencies.ts의 통화 설정(8종, JPY·IDR unit 100)과 API 클라이언트가 일치하는지 확인하세요.
+        - API 키를 코드에 하드코딩하지 않았는지 확인하세요.
+    - path: "**/*.test.ts"
+      instructions: |
+        Vitest 단위 테스트입니다.
+        - 채점 시나리오(calculateExchange, calculateRemittance, storage) 기대값이 의도 없이 변경되지 않았는지 확인하세요.
+        - 슬라이스 public API(@/entities/*, @/shared/*)를 통해 import하는지 확인하세요.
+        - JPY 100단위·IDR 100단위·CNH 매핑 등 도메인 규칙을 검증하는지 확인하세요.
+    - path: "**/*.test.tsx"
+      instructions: |
+        Vitest + React 컴포넌트 테스트입니다.
+        - UI 테스트가 있다면 계산 기대값 변경이 채점에 영향을 주지 않는지 확인하세요.
+        - FSD import 규칙을 위반하지 않았는지 확인하세요.
+    - path: "docs/**"
+      instructions: |
+        프로젝트 문서(PRD, ARCHITECTURE, WORKFLOW, API_PLAN, prompts 등)입니다.
+        - README·PRD·ARCHITECTURE와 실제 구현(FSD 구조, 통화 목록, 계산식)이 일치하는지 확인하세요.
+        - CNY 대신 CNH, JPY·IDR 100단위 등 최신 구현이 반영되었는지 확인하세요.
+        - API 키·개인정보 등 민감정보가 문서에 포함되지 않았는지 확인하세요.
+    - path: ".env.example"
+      instructions: |
+        환경변수 예시 파일입니다.
+        - 실제 API 키나 비밀값이 포함되어 있으면 반드시 지적하세요.
+        - VITE_EXCHANGE_API_KEY=your_api_key_here 형태의 placeholder만 허용됩니다.
+        - .env 파일이 Git에 커밋되지 않도록 .gitignore 안내가 README에 있는지 확인하세요.

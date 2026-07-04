@@ -1,0 +1,157 @@
+---
+description: FSD 아키텍처 공통 규칙
+alwaysApply: true
+---
+
+# FSD 아키텍처 공통 규칙
+
+## 적용 범위
+
+이 Rule은 `KB-ParkHyewon-fx-helper` 프로젝트 전체에 항상 적용한다.
+
+본 프로젝트는 React 19 + TypeScript + Vite + TailwindCSS 기반의 외환 창구 업무 도우미이며, FSD(Feature-Sliced Design) 구조를 따른다.
+
+---
+
+## 1. 기본 레이어 구조
+
+이 프로젝트는 다음 FSD 레이어를 사용한다.
+
+```text
+src/
+├── app/
+├── pages/
+├── widgets/
+├── features/
+├── entities/
+└── shared/
+```
+
+레이어의 의존 방향은 다음과 같다.
+
+```text
+app → pages → widgets → features → entities → shared
+```
+
+상위 레이어는 자기보다 아래 레이어만 import할 수 있다.
+
+---
+
+## 2. 레이어별 역할
+
+| 레이어 | 역할 |
+|---|---|
+| `app` | 앱 진입점, 전역 설정, 전체 화면 조립 |
+| `pages` | 페이지 단위 화면 구성 |
+| `widgets` | 여러 feature/entity를 조합한 독립 UI 블록 |
+| `features` | 사용자 행동 단위 기능 |
+| `entities` | 비즈니스 엔티티, 도메인 타입, 순수 로직 |
+| `shared` | 공용 UI, 공용 유틸, 공용 설정, 공용 API |
+
+---
+
+## 3. import 허용 규칙
+
+다음 방향의 import만 허용한다.
+
+```text
+app → pages
+pages → widgets
+widgets → features
+features → entities
+entities → shared
+```
+
+단, 상위 레이어는 여러 단계 아래 레이어를 직접 import할 수 있다.
+
+허용 예:
+
+```ts
+import { DashboardPage } from "@/pages/dashboard";
+import { ExchangePanel } from "@/widgets/exchange-panel";
+import { calculateExchange } from "@/entities/rate";
+import { formatKrw } from "@/shared/lib";
+```
+
+---
+
+## 4. import 금지 규칙
+
+하위 레이어가 상위 레이어를 import하면 안 된다.
+
+금지 예:
+
+```ts
+// shared에서는 entities/features/widgets/pages/app import 금지
+import { CurrencyCode } from "@/entities/currency";
+
+// entities에서는 features/widgets/pages/app import 금지
+import { CalculateExchangeForm } from "@/features/calculate-exchange";
+
+// features에서는 widgets/pages/app import 금지
+import { ExchangePanel } from "@/widgets/exchange-panel";
+
+// widgets에서는 pages/app import 금지
+import { DashboardPage } from "@/pages/dashboard";
+```
+
+---
+
+## 5. 동일 레이어 슬라이스 간 import 금지
+
+동일 레이어의 서로 다른 슬라이스를 직접 import하지 않는다.
+
+금지 예:
+
+```ts
+import { AddTransactionForm } from "@/features/add-transaction";
+import { TransactionHistoryPanel } from "@/widgets/transaction-history-panel";
+```
+
+공통으로 필요한 로직은 `entities` 또는 `shared`로 내려서 관리한다.
+
+---
+
+## 6. Public API 규칙
+
+각 슬라이스는 `index.ts`를 통해 외부에 필요한 항목만 공개한다.
+
+허용:
+
+```ts
+import { calculateExchange } from "@/entities/rate";
+import { ExchangePanel } from "@/widgets/exchange-panel";
+```
+
+금지:
+
+```ts
+import { calculateExchange } from "@/entities/rate/model/calculateExchange";
+import { ExchangePanel } from "@/widgets/exchange-panel/ui/ExchangePanel";
+```
+
+---
+
+## 7. 코드 배치 기준
+
+새 코드를 작성할 때 다음 기준을 따른다.
+
+| 질문 | 배치 위치 |
+|---|---|
+| 앱 전체 진입점인가? | `app` |
+| 페이지 단위 화면인가? | `pages` |
+| 여러 기능을 조합한 화면 블록인가? | `widgets` |
+| 사용자의 특정 행동인가? | `features` |
+| 외환/송금/거래 기록 도메인 로직인가? | `entities` |
+| 도메인과 무관한 공용 코드인가? | `shared` |
+
+---
+
+## 8. 금지 사항
+
+- 계산 로직을 React 컴포넌트 안에 직접 작성하지 않는다.
+- localStorage key를 여러 파일에 하드코딩하지 않는다.
+- 실제 고객 개인정보를 샘플 데이터에 사용하지 않는다.
+- 실제 API 키를 코드에 직접 작성하지 않는다.
+- FSD 레이어 의존 방향을 위반하지 않는다.
+- 슬라이스 내부 파일을 깊은 경로로 직접 import하지 않는다.
