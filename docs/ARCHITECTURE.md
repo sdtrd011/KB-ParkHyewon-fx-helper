@@ -70,10 +70,10 @@ app → pages → widgets → features → entities → shared
 |---|---|---|
 | `app` | 앱 진입점, 전역 설정, 전체 화면 조립 | `App.tsx`, 전역 스타일 연결 |
 | `pages` | 페이지 단위 화면 구성 | `dashboard` |
-| `widgets` | 페이지를 구성하는 독립 UI 블록 | `exchange-panel`, `remittance-panel`, `transaction-history-panel` |
-| `features` | 사용자 행동 단위 기능 | `calculate-exchange`, `calculate-remittance`, `add-transaction`, `search-transaction` |
-| `entities` | 비즈니스 엔티티, 도메인 타입, 순수 계산 로직 | `currency`, `rate`, `remittance`, `transaction` |
-| `shared` | 공용 UI, 공용 유틸, 공용 설정 | `ui`, `lib`, `config`, `api` |
+| `widgets` | 페이지를 구성하는 독립 UI 블록 | `calculation-panel`, `transaction-history-panel` |
+| `features` | 사용자 행동 단위 기능 | `calculate-exchange`, `calculate-remittance`, `load-exchange-rate`, `add-transaction`, `search-transaction`, `toggle-theme` |
+| `entities` | 비즈니스 엔티티, 도메인 타입, 순수 계산 로직 | `rate`, `remittance`, `transaction`, `exchange-rate` |
+| `shared` | 공용 UI, 공용 유틸, 설정, API | `ui`, `lib`, `config`, `api` |
 
 ---
 
@@ -92,13 +92,9 @@ src/
 │       │   └── DashboardPage.tsx
 │       └── index.ts
 ├── widgets/
-│   ├── exchange-panel/
+│   ├── calculation-panel/
 │   │   ├── ui/
-│   │   │   └── ExchangePanel.tsx
-│   │   └── index.ts
-│   ├── remittance-panel/
-│   │   ├── ui/
-│   │   │   └── RemittancePanel.tsx
+│   │   │   └── CalculationPanel.tsx
 │   │   └── index.ts
 │   └── transaction-history-panel/
 │       ├── ui/
@@ -106,57 +102,28 @@ src/
 │       └── index.ts
 ├── features/
 │   ├── calculate-exchange/
-│   │   ├── ui/
-│   │   │   └── CalculateExchangeForm.tsx
-│   │   └── index.ts
 │   ├── calculate-remittance/
-│   │   ├── ui/
-│   │   │   └── CalculateRemittanceForm.tsx
-│   │   └── index.ts
+│   ├── load-exchange-rate/
 │   ├── add-transaction/
-│   │   ├── ui/
-│   │   │   └── AddTransactionForm.tsx
-│   │   └── index.ts
-│   └── search-transaction/
-│       ├── ui/
-│       │   └── TransactionSearchInput.tsx
-│       └── index.ts
+│   ├── search-transaction/
+│   └── toggle-theme/
 ├── entities/
-│   ├── currency/
-│   │   ├── model/
-│   │   │   ├── types.ts
-│   │   │   └── constants.ts
-│   │   └── index.ts
 │   ├── rate/
-│   │   ├── model/
-│   │   │   ├── calculateExchange.ts
-│   │   │   └── calculateExchange.test.ts
-│   │   └── index.ts
 │   ├── remittance/
-│   │   ├── model/
-│   │   │   ├── calculateRemittance.ts
-│   │   │   └── calculateRemittance.test.ts
-│   │   └── index.ts
-│   └── transaction/
-│       ├── model/
-│       │   ├── types.ts
-│       │   └── storage.ts
-│       └── index.ts
+│   ├── transaction/
+│   └── exchange-rate/
 └── shared/
     ├── ui/
-    │   ├── Button.tsx
-    │   ├── Input.tsx
-    │   ├── Select.tsx
-    │   └── Card.tsx
     ├── lib/
-    │   ├── format.ts
-    │   ├── number.ts
-    │   └── csv.ts
     ├── config/
-    │   └── storageKeys.ts
+    │   ├── currencies.ts
+    │   ├── storageKeys.ts
+    │   └── exchangeRateApi.ts
     └── api/
         └── exchangeRateClient.ts
 ```
+
+> 통화 설정(`CurrencyCode`, `getCurrencyConfig` 등)은 `entities/currency`가 아닌 **`shared/config/currencies.ts`** 에 둔다.
 
 ---
 
@@ -173,17 +140,18 @@ src/
 import { DashboardPage } from "@/pages/dashboard";
 
 // pages → widgets
-import { ExchangePanel } from "@/widgets/exchange-panel";
-import { RemittancePanel } from "@/widgets/remittance-panel";
+import { CalculationPanel } from "@/widgets/calculation-panel";
 import { TransactionHistoryPanel } from "@/widgets/transaction-history-panel";
 
 // widgets → features
 import { CalculateExchangeForm } from "@/features/calculate-exchange";
+import { LoadExchangeRateButton } from "@/features/load-exchange-rate";
 
 // features → entities
 import { calculateExchange } from "@/entities/rate";
 
 // entities → shared
+import { getCurrencyConfig } from "@/shared/config";
 import { roundToTwoDecimals } from "@/shared/lib";
 ```
 
@@ -195,13 +163,13 @@ import { roundToTwoDecimals } from "@/shared/lib";
 
 ```ts
 // 금지: shared가 entities를 import
-import { CurrencyCode } from "@/entities/currency";
+import { calculateExchange } from "@/entities/rate";
 
 // 금지: entities가 features를 import
 import { CalculateExchangeForm } from "@/features/calculate-exchange";
 
 // 금지: features가 widgets를 import
-import { ExchangePanel } from "@/widgets/exchange-panel";
+import { CalculationPanel } from "@/widgets/calculation-panel";
 
 // 금지: widgets가 pages를 import
 import { DashboardPage } from "@/pages/dashboard";
@@ -233,14 +201,14 @@ import { TransactionHistoryPanel } from "@/widgets/transaction-history-panel";
 
 ```ts
 import { calculateExchange } from "@/entities/rate";
-import { ExchangePanel } from "@/widgets/exchange-panel";
+import { CalculationPanel } from "@/widgets/calculation-panel";
 ```
 
 ### 8.2 금지 예시
 
 ```ts
 import { calculateExchange } from "@/entities/rate/model/calculateExchange";
-import { ExchangePanel } from "@/widgets/exchange-panel/ui/ExchangePanel";
+import { CalculationPanel } from "@/widgets/calculation-panel/ui/CalculationPanel";
 ```
 
 ### 8.3 목적
@@ -255,29 +223,31 @@ import { ExchangePanel } from "@/widgets/exchange-panel/ui/ExchangePanel";
 
 ## 9. 도메인 설계
 
-## 9.1 currency 엔티티
+## 9.1 통화 설정 (shared/config)
 
-`currency`는 통화 코드, 통화명, 고시 단위, 기본 스프레드율 정보를 관리한다.
+통화 코드, 통화명, 고시 단위, 기본 스프레드율은 **`shared/config/currencies.ts`** 에서 관리한다.
 
 주요 책임:
 
-- 통화 코드 타입 정의
-- 통화별 고시 단위 정의
-- 통화별 기본 현찰 스프레드율 정의
-- 통화별 기본 전신환 스프레드율 정의
+- 통화 코드 타입 정의 (`CurrencyCode`)
+- 통화별 고시 단위 정의 (JPY·IDR는 `unit: 100`)
+- 통화별 기본 현찰·전신환 스프레드율 정의
+- `getCurrencyConfig`, `formatCurrencyUnitLabel`, `isHundredUnitCurrency` 제공
 
-예상 파일:
+파일:
 
 ```text
-src/entities/currency/model/types.ts
-src/entities/currency/model/constants.ts
-src/entities/currency/index.ts
+src/shared/config/currencies.ts
+src/shared/config/index.ts
 ```
+
+지원 통화 (8종): USD, JPY, EUR, CNH, THB, SGD, IDR, HKD
 
 예상 타입:
 
 ```ts
-export type CurrencyCode = "USD" | "JPY" | "EUR" | "CNY";
+export type CurrencyCode =
+  | "USD" | "JPY" | "EUR" | "CNH" | "THB" | "SGD" | "IDR" | "HKD";
 
 export interface CurrencyConfig {
   code: CurrencyCode;
@@ -299,7 +269,7 @@ export interface CurrencyConfig {
 - 현찰 살 때 적용환율 계산
 - 현찰 팔 때 적용환율 계산
 - 우대율 반영
-- JPY 100엔 단위 처리
+- JPY·IDR 100단위 고시환율 처리 (`shared/config`의 `unit: 100`)
 - 원화 금액 계산
 - 계산 로직 테스트 제공
 
@@ -337,7 +307,7 @@ src/entities/rate/index.ts
 - 송금 외화 금액의 원화 환산
 - 송금수수료와 전신료 합산
 - 총 송금 비용 계산
-- JPY 100엔 단위 처리
+- JPY·IDR 100단위 고시환율 처리 (`shared/config`의 `unit: 100`)
 - 계산 로직 테스트 제공
 
 예상 파일:
@@ -456,6 +426,7 @@ storageKeys.ts
 ```ts
 export const STORAGE_KEYS = {
   transactions: "kb-fx-helper:transactions",
+  theme: "kb-fx-helper:theme",
 } as const;
 ```
 
@@ -465,8 +436,7 @@ export const STORAGE_KEYS = {
 
 `shared/api`는 외부 API 클라이언트 영역이다.
 
-이번 기본 구현에서는 실제 API를 사용하지 않는다.  
-다만 선택 기능으로 실시간 환율 API를 연결할 경우 `shared/api/exchangeRateClient.ts`에 배치한다.
+이번 구현에서는 한국수출입은행 환율 API를 `shared/api/exchangeRateClient.ts`에서 호출하고, `entities/exchange-rate`에서 파싱·전 영업일 fallback을 처리한다.
 
 규칙:
 
@@ -495,7 +465,7 @@ export const STORAGE_KEYS = {
 ```text
 features/calculate-exchange
 → entities/rate
-→ entities/currency
+→ shared/config
 → shared/ui
 → shared/lib
 ```
@@ -519,7 +489,7 @@ features/calculate-exchange
 ```text
 features/calculate-remittance
 → entities/remittance
-→ entities/currency
+→ shared/config
 → shared/ui
 → shared/lib
 ```
@@ -569,45 +539,28 @@ features/search-transaction
 
 ## 12. 위젯 설계
 
-## 12.1 exchange-panel
+## 12.1 calculation-panel
 
-환전 계산 영역을 담당한다.
+환전·해외송금 계산 영역을 탭으로 묶어 담당한다.
 
 예상 구성:
 
-- 환전 계산 폼
-- 환전 계산 결과 카드
-- 거래 기록 추가 기능 연결
+- 환전/해외송금 탭 전환
+- `calculate-exchange`, `calculate-remittance` 폼 (환율 로드 UI는 props로 주입)
+- 거래 기록 추가(`add-transaction`) 연결
 
 사용 가능 feature:
 
 ```text
 calculate-exchange
-add-transaction
-```
-
----
-
-## 12.2 remittance-panel
-
-해외송금 계산 영역을 담당한다.
-
-예상 구성:
-
-- 해외송금 계산 폼
-- 해외송금 결과 카드
-- 거래 기록 추가 기능 연결
-
-사용 가능 feature:
-
-```text
 calculate-remittance
+load-exchange-rate
 add-transaction
 ```
 
 ---
 
-## 12.3 transaction-history-panel
+## 12.2 transaction-history-panel
 
 거래 기록 조회 영역을 담당한다.
 
@@ -642,9 +595,9 @@ transaction
 
 ```text
 DashboardPage
-├── ExchangePanel
-├── RemittancePanel
-└── TransactionHistoryPanel
+├── CalculationPanel (환전·해외송금 탭)
+├── TransactionHistoryPanel
+└── ThemeToggleButton (features/toggle-theme, page 헤더 우측)
 ```
 
 역할:
@@ -702,7 +655,7 @@ export function App() {
 
 - 환전 계산
 - 해외송금 계산
-- JPY 100엔 단위 처리
+- JPY·IDR 100단위 고시환율 처리 (`shared/config`의 `unit: 100`)
 - 우대율 적용
 - 송금수수료와 전신료 합산
 - 포맷 유틸
@@ -781,11 +734,11 @@ tsconfig.app.json
 |---|---|
 | 환전 계산 함수 | `entities/rate` |
 | 해외송금 계산 함수 | `entities/remittance` |
-| 통화 설정 | `entities/currency` |
+| 통화 설정 | `shared/config/currencies.ts` |
 | 금액 포맷 함수 | `shared/lib` |
 | 버튼 컴포넌트 | `shared/ui` |
 | 환전 계산 입력 폼 | `features/calculate-exchange` |
-| 환전 계산 패널 | `widgets/exchange-panel` |
+| 환전·송금 통합 패널 | `widgets/calculation-panel` |
 | 전체 대시보드 | `pages/dashboard` |
 
 ---
@@ -813,7 +766,8 @@ tsconfig.app.json
 - `src/app`, `src/pages`, `src/widgets`, `src/features`, `src/entities`, `src/shared` 구조가 존재한다.
 - 환전 계산 로직은 `entities/rate`에 있다.
 - 해외송금 계산 로직은 `entities/remittance`에 있다.
-- 통화 설정은 `entities/currency`에 있다.
+- 통화 설정은 `shared/config/currencies.ts`에 있다.
+- 환율 API 파싱·조회는 `entities/exchange-rate`에 있다.
 - 거래 기록 타입과 저장 로직은 `entities/transaction`에 있다.
 - 금액 포맷, CSV 유틸 등 공용 함수는 `shared/lib`에 있다.
 - 공용 UI는 `shared/ui`에 있다.

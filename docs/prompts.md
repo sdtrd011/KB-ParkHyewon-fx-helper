@@ -676,3 +676,149 @@
   - `npm.cmd run build` — **성공**
 - **추가 확인 사항**:
   - GitHub 저장소에 CodeRabbit 앱 연동 후 PR에서 실제 리뷰 동작 확인 권장
+
+### 다크모드 기능 추가
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Act / Reflect
+- **요청 목적**:
+  - 화면 우측 상단에서 라이트/다크 테마를 전환하고, 선택 상태를 localStorage에 유지한다.
+  - TailwindCSS `dark:` 변형으로 배경·카드·입력창·텍스트 색상만 자연스럽게 조정한다.
+  - 환전/해외송금/거래 기록 계산 로직·API·테스트 기대값은 변경하지 않는다.
+- **사용한 프롬프트**:
+  ```text
+  다크모드 기능 추가.
+  우측 상단 전환 버튼(다크모드/라이트모드), localStorage 유지,
+  Tailwind dark 변형, FSD(shared/lib + features/toggle-theme),
+  계산·API·테스트 기대값 수정 금지, README·prompts.md 기록, test/build 실행.
+  ```
+- **생성/수정 파일**:
+  - `src/shared/config/storageKeys.ts` — `theme` 키 추가
+  - `src/shared/lib/theme/themeStorage.ts` — 테마 저장·DOM 적용 (신규)
+  - `src/shared/lib/theme/ThemeProvider.tsx` — ThemeProvider·useTheme (신규)
+  - `src/shared/lib/index.ts` — theme export 추가
+  - `src/features/toggle-theme/` — ThemeToggleButton (신규)
+  - `src/index.css` — `@custom-variant dark` 추가
+  - `src/main.tsx` — `initializeTheme()` 호출
+  - `src/app/App.tsx` — ThemeProvider 래핑, 다크 배경 클래스
+  - `src/pages/dashboard/ui/DashboardPage.tsx` — 우측 상단 ThemeToggleButton 배치
+  - `src/shared/ui/{Card,Input,Select,Button}.tsx` — dark: 색상 변형
+  - `src/widgets/calculation-panel`, `transaction-history-panel` — dark: 스타일
+  - `src/features/calculate-exchange`, `calculate-remittance`, `add-transaction`, `load-exchange-rate` — 알림·결과·테이블 dark: 스타일
+  - `README.md` — 다크모드 기능·toggle-theme 슬라이스 안내
+  - `docs/prompts.md` — 작업 기록 추가
+- **결과 요약**:
+  - 라이트 모드에서 버튼 텍스트 "다크모드", 다크 모드에서 "라이트모드"
+  - `kb-fx-helper:theme` localStorage 키로 테마 유지, `html.dark` 클래스 기반 Tailwind v4 dark variant
+  - 계산 함수·API 호출·Vitest 기대값 변경 없음
+  - `npm.cmd run test` — 6 files, **41 tests passed**
+  - `npm.cmd run build` — **성공**
+- **추가 확인 사항**:
+  - 브라우저에서 다크모드 전환·새로고침 후 테마 유지 동작 확인 권장
+
+### 입력값 검증 로직 보완
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Act / Reflect
+- **요청 목적**:
+  - 우대율·스프레드율 0~100% 범위 검증, 금액성 입력값 양수 검증, 현찰 팔 때 적용환율 0 이하 차단.
+  - 계산 공식·채점 테스트 기대값은 변경하지 않는다.
+- **사용한 프롬프트**:
+  ```text
+  입력값 검증 보완.
+  우대율·스프레드율 0~100%, 범위 초과 시 지정 메시지,
+  금액성 입력 0 초과, 현찰 팔 때 적용환율 0 이하 차단,
+  계산 공식·테스트 기대값 수정 금지, README·test/build·prompts.md 기록.
+  ```
+- **생성/수정 파일**:
+  - `src/shared/lib/validation.ts` — 검증 메시지·헬퍼 함수 (신규)
+  - `src/shared/lib/index.ts` — validation export
+  - `src/entities/rate/model/calculateExchange.ts` — 스프레드율 상한·현찰 팔 때 적용환율 검증
+  - `src/entities/remittance/model/calculateRemittance.ts` — 스프레드율 상한 검증 통일
+  - `README.md` — 입력값 검증 섹션 추가
+  - `docs/prompts.md` — 작업 기록 추가
+- **결과 요약**:
+  - 우대율·스프레드율 범위 초과 시 각각 지정 메시지로 계산 중단
+  - 매매기준율·전신환매도율·외화 금액은 0보다 큰 값만 허용
+  - 현찰 팔 때 적용환율이 0 이하가 되면 계산하지 않고 오류 표시
+  - 계산 공식·Vitest 기대값(appliedRate, krwAmount 등) 변경 없음
+  - `npm.cmd run test` — 6 files, **41 tests passed**
+  - `npm.cmd run build` — **성공**
+
+### merge 전 FSD·아키텍처 최종 점검
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Reflect
+- **요청 목적**:
+  - merge 전 `docs/ARCHITECTURE.md`·Cursor Rules 기준으로 FSD 구조·도메인·API·문서 일치성을 점검한다.
+  - 코드 수정 없이 점검 결과만 정리한다.
+- **점검 기준**:
+  - `docs/ARCHITECTURE.md`, `.cursor/rules/00-architecture.mdc`, `10-domain-fx.mdc`, `20-ui.mdc`, `30-testing.mdc`
+- **검증 명령**:
+  - `npm.cmd run test` — 6 files, **41 tests passed**
+  - `npm.cmd run build` — **성공**
+- **항목별 상태 요약**:
+
+| # | 점검 항목 | 상태 |
+|---|-----------|------|
+| 1 | FSD 의존 방향 | **준수** |
+| 2 | 동일 레이어 슬라이스 간 직접 import | **준수** |
+| 3 | Public API import | **준수** |
+| 4 | 도메인 로직 위치 | **준수** |
+| 5 | API / 환경변수 구조 | **준수** |
+| 6 | 문서 일치성 | **주의** |
+| 7 | 테스트 / 빌드 | **준수** |
+
+- **최종 결론**: 운영 코드 기준 FSD·도메인 분리·API 구조 **위반 0건**, 테스트·빌드 통과. 문서(CNY→CNH, 8종 통화, `entities/currency`→`shared/config` 등)와 미사용 위젯 정리는 merge 후속 작업으로 권장. **merge 가능** (코드 아키텍처 관점).
+
+### merge 전 주의사항 반영 (문서·정리·선택 개선)
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Reflect
+- **요청 목적**:
+  - 이전 FSD 점검의 주의사항을 바탕으로 설계 문서·Rules 현행화, 미사용 위젯 제거, `parseNumber` 공통화.
+  - 기능 로직·테스트 기대값·FSD 대구조는 유지한다.
+- **수정 파일**:
+  - **문서**: `docs/ARCHITECTURE.md`, `docs/PRD.md`, `docs/API_PLAN.md`, `docs/WORKFLOW.md`
+  - **Rules**: `.cursor/rules/00-architecture.mdc`, `10-domain-fx.mdc`, `20-ui.mdc`
+  - **코드**: `src/shared/lib/number.ts`, `src/shared/lib/index.ts`, `calculate-exchange`/`calculate-remittance` 폼
+  - **삭제**: `src/widgets/exchange-panel/`, `src/widgets/remittance-panel/` (미사용)
+  - `docs/prompts.md` — 작업 기록
+- **주요 변경**:
+  - 통화 설정 `shared/config/currencies.ts`, 8종(CNH·IDR 100단위), `calculation-panel` 중심 구조로 문서 통일
+  - 미사용 `exchange-panel`·`remittance-panel` 위젯 제거
+  - `parseNumber`를 `shared/lib`로 추출해 두 계산 폼에서 재사용
+- **FSD 재점검**: 의존 방향·동일 레이어 교차 import·deep import **위반 0건**
+- **검증**:
+  - `npm.cmd run test` — 6 files, **41 tests passed**
+  - `npm.cmd run build` — **성공**
+- **선택 개선 (미적용, 참고)**:
+  - `search-transaction` feature는 입력 UI만 담당하고 `searchTransactions`는 widget에서 호출 — 현 구조 유지
+  - `ThemeToggleButton`은 page에서 직접 배치 — 허용 범위, 별도 widget 분리는 선택 사항
+- **최종 결론**: **merge 가능**
+
+### 해외송금 수수료 USD 상당액 기준 수정
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Act / Reflect
+- **요청 목적**:
+  - 송금수수료 구간을 외화 금액 숫자가 아닌 USD 상당액(원화 환산 송금원금 ÷ USD 매매기준율)으로 판단한다.
+  - JPY·IDR unit 100 반영, API/기본값(1550원) USD 기준환율, 결과 화면 USD 상당액 표시.
+- **생성/수정 파일**:
+  - `src/shared/config/remittance.ts` — `DEFAULT_USD_BASE_RATE`, 안내 문구 (신규)
+  - `src/entities/remittance/model/remittanceFees.ts` — `resolveUsdEquivalentAmount` 로직 변경
+  - `src/entities/remittance/model/calculateRemittance.ts` — USD 상당액·기준환율 반영
+  - `src/entities/remittance/model/types.ts` — `usdEquivalentAmount`, `usdBaseRate` 필드 추가
+  - `src/entities/exchange-rate/model/loadExchangeRateQuote.ts` — `loadRemittanceExchangeRates` 추가
+  - `src/features/load-exchange-rate/ui/LoadRemittanceRateButton.tsx` — USD 매매기준율 동시 로드
+  - `src/features/calculate-remittance/ui/CalculateRemittanceForm.tsx` — 안내·결과 표시
+  - `src/shared/lib/format.ts` — `formatUsdEquivalent` 추가
+  - `src/entities/remittance/model/calculateRemittance.test.ts` — JPY/IDR/SGD/HKD 시나리오 테스트 추가
+  - `README.md`, `docs/PRD.md` — USD 상당액 수수료 산정 설명
+  - `docs/prompts.md` — 작업 기록
+- **결과 요약**:
+  - USD 상당액 = 원화 환산 송금원금 ÷ USD 매매기준율, 구간별 송금수수료 적용
+  - API 성공 시 USD `deal_bas_r` 사용, 수동·실패 시 1,550원 적용 및 안내 메시지 표시
+  - JPY 5,000 → 송금수수료 5,000원, USD 3,000 → 15,000원 등 기존 정상 시나리오 유지
+  - `npm.cmd run test` — 6 files, **46 tests passed**
+  - `npm.cmd run build` — **성공**

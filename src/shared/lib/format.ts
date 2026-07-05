@@ -16,3 +16,10 @@ export function formatPercent(percent: number): string {
 export function formatForeignAmount(amount: number, currencyCode: string): string {
   return `${amount.toLocaleString('ko-KR')} ${currencyCode}`
 }
+
+export function formatUsdEquivalent(amount: number): string {
+  return `USD ${amount.toLocaleString('ko-KR', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })} 상당`
+}

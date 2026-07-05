@@ -39,14 +39,14 @@ export function RateSourceNotice({
       : `${formattedDate} 기준 환율 정보를 불러왔습니다.`
 
     return (
-      <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 md:col-span-2">
+      <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-800 dark:bg-green-950 dark:text-green-200 md:col-span-2">
         {message} ({unitLabel})
       </p>
     )
   }
 
   return (
-    <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600 md:col-span-2">
+    <p className="rounded-md bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-800 dark:text-slate-300 md:col-span-2">
       환율을 직접 입력 중입니다. ({unitLabel})
     </p>
   )

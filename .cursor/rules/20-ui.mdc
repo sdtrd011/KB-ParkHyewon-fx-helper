@@ -55,7 +55,7 @@ src/shared/ui/**/*.tsx
 
 ```text
 DashboardPage → pages/dashboard
-ExchangePanel → widgets/exchange-panel
+CalculationPanel → widgets/calculation-panel
 CalculateExchangeForm → features/calculate-exchange
 Button → shared/ui
 ```

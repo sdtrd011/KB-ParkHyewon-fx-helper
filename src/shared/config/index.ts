@@ -14,3 +14,7 @@ export {
   KOREA_EXIM_EXCHANGE_DATA_TYPE,
 } from './exchangeRateApi'
 export { STORAGE_KEYS } from './storageKeys'
+export {
+  DEFAULT_USD_BASE_RATE,
+  DEFAULT_USD_BASE_RATE_NOTICE,
+} from './remittance'

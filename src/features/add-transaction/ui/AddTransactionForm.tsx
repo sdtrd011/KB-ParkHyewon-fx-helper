@@ -85,14 +85,16 @@ export function AddTransactionForm({ snapshot, onSaved }: AddTransactionFormProp
           value={memo}
           onChange={(event) => setMemo(event.target.value)}
         />
-        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800">{PRIVACY_NOTICE}</p>
+        <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          {PRIVACY_NOTICE}
+        </p>
         {errorMessage && (
-          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+          <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300" role="alert">
             {errorMessage}
           </p>
         )}
         {successMessage && (
-          <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700" role="status">
+          <p className="rounded-md bg-green-50 px-3 py-2 text-sm text-green-700 dark:bg-green-950 dark:text-green-300" role="status">
             {successMessage}
           </p>
         )}

@@ -9,3 +9,17 @@ export function roundToInteger(value: number): number {
 export function percentToDecimal(percent: number): number {
   return percent / 100
 }
+
+export function parseNumber(value: string): number | null {
+  if (value.trim() === '') {
+    return null
+  }
+
+  const parsed = Number(value)
+
+  if (Number.isNaN(parsed)) {
+    return null
+  }
+
+  return parsed
+}

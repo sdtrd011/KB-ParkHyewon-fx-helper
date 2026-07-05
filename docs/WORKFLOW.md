@@ -95,22 +95,22 @@ Plan 단계가 끝나면 다음 내용이 정리되어야 한다.
 ```text
 기능: 환전 계산기
 관련 레이어:
-- entities/currency
+- shared/config (currencies)
 - entities/rate
 - features/calculate-exchange
-- widgets/exchange-panel
+- widgets/calculation-panel
 
 테스트 대상:
 - calculateExchange 함수
-- JPY 100엔 단위 처리
+- JPY·IDR 100단위 처리
 - 우대율 0%, 50%, 100% 계산
 
 구현 순서:
-1. currency 타입과 설정 작성
+1. shared/config 통화 설정 작성
 2. calculateExchange 순수 함수 테스트 작성
 3. calculateExchange 함수 구현
 4. 환전 계산 입력 폼 작성
-5. 환전 패널에 연결
+5. calculation-panel에 연결
 ```
 
 ### 4.5 Plan 단계 완료 조건
@@ -201,22 +201,24 @@ entities → shared → features → widgets → pages → app
 
 ```text
 1. shared/lib 공용 유틸 작성
-2. entities/currency 통화 설정 작성
+2. shared/config 통화 설정 작성 (currencies.ts)
 3. entities/rate 환전 계산 로직 작성
 4. entities/remittance 해외송금 계산 로직 작성
 5. entities/transaction 거래 기록 타입과 저장 로직 작성
-6. features/calculate-exchange 작성
-7. features/calculate-remittance 작성
-8. features/add-transaction 작성
-9. features/search-transaction 작성
-10. widgets/exchange-panel 작성
-11. widgets/remittance-panel 작성
-12. widgets/transaction-history-panel 작성
-13. pages/dashboard 작성
-14. app/App.tsx 연결
-15. npm run dev로 화면 확인
-16. npm run test로 테스트 확인
-17. npm run build로 빌드 확인
+6. entities/exchange-rate 환율 API 파싱·조회 작성
+7. features/calculate-exchange 작성
+8. features/calculate-remittance 작성
+9. features/load-exchange-rate 작성
+10. features/add-transaction 작성
+11. features/search-transaction 작성
+12. features/toggle-theme 작성
+13. widgets/calculation-panel 작성
+14. widgets/transaction-history-panel 작성
+15. pages/dashboard 작성
+16. app/App.tsx 연결
+17. npm run dev로 화면 확인
+18. npm run test로 테스트 확인
+19. npm run build로 빌드 확인
 ```
 
 ### 6.3 Act 단계 규칙
