@@ -1,4 +1,11 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from 'react'
 import {
   applyThemeToDocument,
   getStoredTheme,
@@ -16,15 +23,13 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<ThemeMode>(() => getStoredTheme())
 
+  useEffect(() => {
+    setStoredTheme(theme)
+    applyThemeToDocument(theme)
+  }, [theme])
+
   const toggleTheme = useCallback(() => {
-    setTheme((current) => {
-      const next: ThemeMode = current === 'light' ? 'dark' : 'light'
-
-      setStoredTheme(next)
-      applyThemeToDocument(next)
-
-      return next
-    })
+    setTheme((current) => (current === 'light' ? 'dark' : 'light'))
   }, [])
 
   return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>

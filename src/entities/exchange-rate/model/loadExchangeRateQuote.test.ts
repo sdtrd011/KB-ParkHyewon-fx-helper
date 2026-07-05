@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { loadExchangeRateQuote } from '@/entities/exchange-rate'
+import { loadExchangeRateQuote, loadRemittanceExchangeRates } from '@/entities/exchange-rate'
 import { ExchangeRateDateNotAvailableError } from '@/shared/api'
+import { DEFAULT_USD_BASE_RATE } from '@/shared/config'
 
 const mockFetchKoreaEximExchangeRates = vi.fn()
 
@@ -19,6 +20,14 @@ const USD_ITEM = {
   deal_bas_r: '1,396.16',
   tts: '1,410.12',
   cur_nm: '미국 달러',
+}
+
+const JPY_ITEM = {
+  result: 1,
+  cur_unit: 'JPY(100)',
+  deal_bas_r: '945.67',
+  tts: '950.00',
+  cur_nm: '일본 옌',
 }
 
 function formatSearchDate(date: Date): string {
@@ -78,5 +87,52 @@ describe('loadExchangeRateQuote', () => {
       '최근 7일 이내 환율 고시 데이터를 찾을 수 없습니다.',
     )
     expect(mockFetchKoreaEximExchangeRates).toHaveBeenCalledTimes(7)
+  })
+})
+
+describe('loadRemittanceExchangeRates', () => {
+  beforeEach(() => {
+    mockFetchKoreaEximExchangeRates.mockReset()
+  })
+
+  it('USD 송금 환율 조회 시 선택 통화 quote를 usdBaseRate로 재사용한다', async () => {
+    const todaySearchDate = formatSearchDate(new Date())
+
+    mockFetchKoreaEximExchangeRates.mockResolvedValueOnce({
+      searchDate: todaySearchDate,
+      items: [USD_ITEM],
+    })
+
+    const result = await loadRemittanceExchangeRates('USD')
+
+    expect(mockFetchKoreaEximExchangeRates).toHaveBeenCalledTimes(1)
+    expect(result.telegraphicSellingRate).toBe(1410.12)
+    expect(result.unit).toBe(1)
+    expect(result.usdBaseRate).toBe(1396.16)
+    expect(result.usdBaseRateFromApi).toBe(true)
+    expect(result.usdBaseRate).not.toBe(DEFAULT_USD_BASE_RATE)
+    expect(result.quotedDate).toBe(todaySearchDate)
+    expect(result.isPreviousBusinessDay).toBe(false)
+  })
+
+  it('USD 외 통화 송금 환율 조회 시 선택 통화와 USD 매매기준율을 각각 반환한다', async () => {
+    const todaySearchDate = formatSearchDate(new Date())
+
+    mockFetchKoreaEximExchangeRates.mockResolvedValueOnce({
+      searchDate: todaySearchDate,
+      items: [JPY_ITEM, USD_ITEM],
+    })
+
+    const result = await loadRemittanceExchangeRates('JPY')
+
+    expect(mockFetchKoreaEximExchangeRates).toHaveBeenCalledTimes(1)
+    expect(result.telegraphicSellingRate).toBe(950)
+    expect(result.unit).toBe(100)
+    expect(result.usdBaseRate).toBe(1396.16)
+    expect(result.usdBaseRateFromApi).toBe(true)
+    expect(result.usdBaseRate).not.toBe(DEFAULT_USD_BASE_RATE)
+    expect(result.usdBaseRate).not.toBe(result.telegraphicSellingRate)
+    expect(result.quotedDate).toBe(todaySearchDate)
+    expect(result.isPreviousBusinessDay).toBe(false)
   })
 })

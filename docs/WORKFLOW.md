@@ -187,10 +187,16 @@ src/shared/lib/csv.test.ts
 
 Act 단계는 Plan과 Test에서 정리한 내용을 기준으로 실제 코드를 구현하는 단계이다.
 
-이 단계에서는 한 번에 모든 코드를 작성하지 않고, 하위 레이어에서 상위 레이어 순서로 구현한다.
+이 단계에서는 한 번에 모든 코드를 작성하지 않고, **하위 레이어에서 상위 레이어 순서**로 구현한다.
 
 ```text
-entities → shared → features → widgets → pages → app
+구현 순서: shared → entities → features → widgets → pages → app
+```
+
+FSD **import 의존 방향**(상위 레이어가 하위를 참조)은 다음과 같으며, 구현 순서와는 별개 개념이다.
+
+```text
+import 방향: app → pages → widgets → features → entities → shared
 ```
 
 단, 공용 포맷 유틸처럼 도메인 계산에 먼저 필요한 `shared/lib`는 `entities` 구현 전에 작성할 수 있다.

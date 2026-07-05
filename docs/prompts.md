@@ -822,3 +822,63 @@
   - JPY 5,000 → 송금수수료 5,000원, USD 3,000 → 15,000원 등 기존 정상 시나리오 유지
   - `npm.cmd run test` — 6 files, **46 tests passed**
   - `npm.cmd run build` — **성공**
+
+### CodeRabbit 리뷰 피드백 반영 (최소 범위)
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Act / Reflect
+- **요청 목적**:
+  - CodeRabbit 리뷰 결과 중 현재 코드 기준으로 유효한 지적만 최소 범위로 반영한다.
+  - 계산 결과·테스트 기대값·화면 기능은 변경하지 않고, 문서 정합성·소규모 안정성 개선을 우선한다.
+- **반영한 항목**:
+  1. **`docs/ARCHITECTURE.md`** — 폴더 트리에서 API 클라이언트(`shared/api/exchangeRateClient.ts`)와 설정(`shared/config`) 분리. `exchangeRateApi.ts`는 엔드포인트 상수로 10.3절에 명시.
+  2. **`docs/PRD.md`** — 7.1.5 송금수수료(USD 상당액 자동 산정)·전신료(건당 8,000원 고정) 설명 수정. 7.1.6 전신환 스프레드율 검증을 0~100%로 통일, 사용자 입력이 아닌 수수료 검증 행 제거.
+  3. **`docs/WORKFLOW.md`** — Act 단계 구현 순서를 `shared → entities → features → widgets → pages → app`로 수정. import 방향(`app → … → shared`)과 구현 순서가 다른 개념임을 명시.
+  4. **`loadExchangeRateQuote.ts`** — `currencyCode === 'USD'`일 때 이미 조회한 `quote.baseRate`를 `usdBaseRate`로 재사용. 없을 때만 `DEFAULT_USD_BASE_RATE` fallback.
+  5. **`remittance.ts`** — `DEFAULT_USD_BASE_RATE_NOTICE`가 `DEFAULT_USD_BASE_RATE.toLocaleString('ko-KR')`을 참조하도록 변경.
+  6. **`ThemeProvider.tsx`** — `toggleTheme`는 다음 theme만 계산. `setStoredTheme`·`applyThemeToDocument`는 `useEffect([theme])`에서 처리해 StrictMode 중복 side effect 위험 완화.
+- **보류한 항목 (선택 개선)**:
+
+  | 항목 | 사유 |
+  |---|---|
+  | `loadRemittanceExchangeRates` / `loadExchangeRateQuote` retry 공통화 | 변경 범위가 커지고 API fallback 동작 영향 가능 — **선택 개선으로 보류** |
+  | Notice/Alert 공통 컴포넌트 추출 | 3개 폼 UI 리팩토링 — **선택 개선으로 보류** |
+  | `calculateExchange`·validation 공식 helper 추출 | 도메인 검증 로직 구조 변경 — **선택 개선으로 보류** |
+  | Input/Select 스타일 상수 공통화 | UI 전반 스타일 변경 — **선택 개선으로 보류** |
+  | Stylelint Tailwind `@custom-variant` 설정 | 빌드·린트 설정 추가 — **선택 개선으로 보류** |
+
+- **생성/수정 파일**:
+  - `docs/ARCHITECTURE.md`, `docs/PRD.md`, `docs/WORKFLOW.md`
+  - `src/entities/exchange-rate/model/loadExchangeRateQuote.ts`
+  - `src/shared/config/remittance.ts`
+  - `src/shared/lib/theme/ThemeProvider.tsx`
+  - `docs/prompts.md` — 작업 기록
+- **검증**:
+  - `npm.cmd run test` — 6 files, **46 tests passed**
+  - `npm.cmd run build` — **성공**
+  - FSD import 위반 재점검 — shared/entities/features/widgets에서 상위 레이어 import **0건** (신규 위반 없음)
+- **README.md**: 이번 변경으로 README와 구현이 어긋나지 않아 수정하지 않음.
+
+### loadRemittanceExchangeRates 회귀 테스트 보강
+
+- **작업일**: 2026-07-05
+- **작업 단계**: Test / Reflect
+- **요청 목적**:
+  - CodeRabbit 리뷰에서 지적한 `loadRemittanceExchangeRates`의 USD quote 재사용·비USD 통화 USD 기준환율 분기를 Vitest로 회귀 검증한다.
+  - 기존 기능 로직과 테스트 기대값은 변경하지 않는다.
+- **사용한 프롬프트**:
+  ```text
+  loadRemittanceExchangeRates 관련 테스트 보강.
+  USD 송금 환율 조회 시 quote 재사용, USD 외 통화 시 선택 통화·USD 기준환율 분리 검증.
+  테스트 이름 한국어, test/build 실행, prompts.md 기록.
+  ```
+- **생성/수정 파일**:
+  - `src/entities/exchange-rate/model/loadExchangeRateQuote.test.ts` — `loadRemittanceExchangeRates` describe 블록·JPY mock 추가
+  - `docs/prompts.md` — 작업 기록
+- **추가한 테스트**:
+  1. **USD 송금 환율 조회 시 선택 통화 quote를 usdBaseRate로 재사용한다** — `telegraphicSellingRate`·`usdBaseRate` 모두 USD quote 기준(1,396.16 / 1,410.12), `usdBaseRateFromApi: true`, `DEFAULT_USD_BASE_RATE` fallback 미사용 확인
+  2. **USD 외 통화 송금 환율 조회 시 선택 통화와 USD 매매기준율을 각각 반환한다** — JPY `tts`·unit 100은 JPY quote, `usdBaseRate`는 USD `deal_bas_r`(1,396.16) 기준, `usdBaseRateFromApi: true` 확인
+- **결과 요약**:
+  - `npm.cmd run test` — 6 files, **48 tests passed** (기존 46 + 신규 2)
+  - `npm.cmd run build` — **성공**
+  - 프로덕션 로직(`loadExchangeRateQuote.ts`) 변경 없음

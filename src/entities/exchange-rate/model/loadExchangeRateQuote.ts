@@ -45,7 +45,15 @@ function isRetriableLookupError(error: unknown): boolean {
 function resolveUsdBaseRateFromItems(
   items: Parameters<typeof findExchangeRateQuote>[0],
   quotedDate: string,
+  existingQuote?: ExchangeRateQuote,
 ): { usdBaseRate: number; usdBaseRateFromApi: boolean } {
+  if (existingQuote?.currencyCode === 'USD') {
+    return {
+      usdBaseRate: existingQuote.baseRate,
+      usdBaseRateFromApi: true,
+    }
+  }
+
   try {
     const usdQuote = findExchangeRateQuote(items, 'USD', quotedDate)
 
@@ -115,7 +123,11 @@ export async function loadRemittanceExchangeRates(
     try {
       const { items } = await fetchKoreaEximExchangeRates(searchDate)
       const quote = findExchangeRateQuote(items, currencyCode, searchDate)
-      const { usdBaseRate, usdBaseRateFromApi } = resolveUsdBaseRateFromItems(items, searchDate)
+      const { usdBaseRate, usdBaseRateFromApi } = resolveUsdBaseRateFromItems(
+        items,
+        searchDate,
+        quote,
+      )
 
       return {
         telegraphicSellingRate: quote.telegraphicSellingRate,

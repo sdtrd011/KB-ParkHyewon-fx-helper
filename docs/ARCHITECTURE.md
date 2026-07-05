@@ -118,12 +118,16 @@ src/
     ├── config/
     │   ├── currencies.ts
     │   ├── storageKeys.ts
+    │   ├── remittance.ts
     │   └── exchangeRateApi.ts
     └── api/
-        └── exchangeRateClient.ts
+        ├── exchangeRateClient.ts
+        ├── types.ts
+        └── index.ts
 ```
 
-> 통화 설정(`CurrencyCode`, `getCurrencyConfig` 등)은 `entities/currency`가 아닌 **`shared/config/currencies.ts`** 에 둔다.
+> 통화 설정(`CurrencyCode`, `getCurrencyConfig` 등)은 **`shared/config/currencies.ts`** 에 둔다.  
+> 환율 API **호출 클라이언트**는 `shared/api/exchangeRateClient.ts`, 엔드포인트·프록시 경로 상수는 `shared/config/exchangeRateApi.ts`에 둔다.
 
 ---
 
@@ -418,8 +422,13 @@ downloadCsv(filename: string, rows: string[][]): void
 예:
 
 ```text
+currencies.ts
 storageKeys.ts
+remittance.ts
+exchangeRateApi.ts
 ```
+
+`exchangeRateApi.ts`는 API URL·프록시 경로·조회 일수 등 **설정 상수**이며, 실제 HTTP 호출은 `shared/api`에서 수행한다.
 
 예상 값:
 
