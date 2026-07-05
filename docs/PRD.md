@@ -136,7 +136,7 @@
 
 | 항목 | 설명 | 예시 |
 |---|---|---|
-| 통화 | 환전 대상 통화 | USD, JPY, EUR, CNY |
+| 통화 | 환전 대상 통화 | USD, JPY, EUR, CNH, THB, SGD, IDR, HKD |
 | 매매기준율 | 기준이 되는 고시환율 | 1,380.50 |
 | 거래 구분 | 현찰 살 때 또는 현찰 팔 때 | 현찰 살 때 |
 | 스프레드율 | 통화별 또는 거래별 스프레드율 | 1.75% |
@@ -183,12 +183,11 @@
 
 | 통화 | 고시 단위 | 계산 단위 |
 |---|---:|---:|
-| USD | 1달러당 | 1 |
-| EUR | 1유로당 | 1 |
-| CNY | 1위안당 | 1 |
+| USD, EUR, CNH, THB, SGD, HKD | 1단위당 | 1 |
 | JPY | 100엔당 | 100 |
+| IDR | 100루피아당 | 100 |
 
-JPY는 100엔당 고시환율 기준으로 계산한다.
+JPY·IDR은 100단위 고시환율 기준으로 계산한다.
 
 예:
 
@@ -227,7 +226,7 @@ JPY는 100엔당 고시환율 기준으로 계산한다.
 | 매매기준율 빈 값 | 매매기준율을 입력해주세요. |
 | 매매기준율 0 이하 | 매매기준율은 0보다 커야 합니다. |
 | 스프레드율 빈 값 | 스프레드율을 입력해주세요. |
-| 스프레드율 음수 | 스프레드율은 0% 이상이어야 합니다. |
+| 스프레드율 0 미만 또는 100 초과 | 스프레드율은 0% 이상 100% 이하로 입력해주세요. |
 | 우대율 빈 값 | 우대율을 입력해주세요. |
 | 우대율 0 미만 또는 100 초과 | 우대율은 0% 이상 100% 이하로 입력해주세요. |
 | 금액 빈 값 | 외화 금액을 입력해주세요. |
@@ -323,19 +322,19 @@ kb-fx-helper:transactions
 
 ### 7.1.1 기능 개요
 
-사용자가 통화, 송금 외화 금액, 전신환매도율, 송금수수료, 전신료를 입력하면 해외송금 시 필요한 총 원화 비용을 계산한다.
+사용자가 통화, 송금 외화 금액, 전신환매도율, 스프레드율, 우대율을 입력하면 해외송금 시 필요한 총 원화 비용을 계산한다. 송금수수료는 USD 상당액 구간표에 따라 자동 산정한다.
 
 ### 7.1.2 입력 항목
 
 | 항목 | 설명 | 예시 |
 |---|---|---|
-| 통화 | 송금 통화 | USD, JPY, EUR |
+| 통화 | 송금 통화 | USD, JPY, EUR, CNH, THB, SGD, IDR, HKD |
 | 송금 외화 금액 | 송금할 외화 금액 | 1,000 |
 | 전신환매도율 | 송금 계산에 적용되는 환율 | 1,375.20 |
 | 전신환 스프레드율 | 전신환 계산 시 적용할 스프레드율 | 1.0% |
 | 우대율 | 전신환 스프레드에 적용할 우대율 | 30% |
-| 송금수수료 | 은행 송금수수료 | 5,000원 |
-| 전신료 | 전신료 | 8,000원 |
+
+송금수수료·전신료는 구간표·고정값으로 자동 계산한다. (전신료 8,000원)
 
 ### 7.1.3 계산식
 
@@ -349,6 +348,8 @@ kb-fx-helper:transactions
 
 ```text
 원화 환산 금액 = 반올림(송금 외화 금액 ÷ 통화 단위 × 전신환 적용환율)
+USD 상당액 = 원화 환산 금액 ÷ USD 매매기준율
+송금수수료 = USD 상당액 구간별 수수료 (README 수수료표 참고)
 ```
 
 총 송금 비용은 다음과 같다.
@@ -357,9 +358,12 @@ kb-fx-helper:transactions
 총 송금 비용 = 원화 환산 금액 + 송금수수료 + 전신료
 ```
 
-### 7.1.4 JPY 처리
+> 송금수수료는 **선택 통화 금액 숫자가 아니라 USD 상당액** 기준이다.  
+> USD 매매기준율은 환율 API의 USD `deal_bas_r`을 사용하고, 미사용·실패 시 **1,550원** 고정값을 적용한다.
 
-JPY는 100엔당 고시환율 기준으로 계산한다.
+### 7.1.4 JPY·IDR 처리
+
+JPY·IDR은 100단위 고시환율 기준으로 계산한다.
 
 ```text
 원화 환산 금액 = 송금 외화 금액 ÷ 100 × 전신환 적용환율
@@ -500,10 +504,10 @@ src/
 |---|---|---|
 | app | 전역 설정, 프로바이더, 진입 조립 | App.tsx, 전역 스타일 |
 | pages | 라우트 단위 화면 | dashboard |
-| widgets | 페이지를 구성하는 독립 UI 블록 | exchange-panel, remittance-panel, transaction-history-panel |
-| features | 사용자 행동 또는 시나리오 단위 기능 | calculate-exchange, calculate-remittance, add-transaction, search-transaction |
-| entities | 비즈니스 엔티티, 모델, 도메인 로직 | currency, rate, remittance, transaction |
-| shared | 어디서나 쓰는 공용 코드 | lib, ui, config, api |
+| widgets | 페이지를 구성하는 독립 UI 블록 | calculation-panel, transaction-history-panel |
+| features | 사용자 행동 또는 시나리오 단위 기능 | calculate-exchange, calculate-remittance, load-exchange-rate, add-transaction, search-transaction, toggle-theme |
+| entities | 비즈니스 엔티티, 모델, 도메인 로직 | rate, remittance, transaction, exchange-rate |
+| shared | 어디서나 쓰는 공용 코드 | lib, ui, config (currencies, storageKeys), api |
 
 ### 8.2 의존 방향
 
@@ -527,7 +531,8 @@ app → pages → widgets → features → entities → shared
 ## 9.1 통화 타입
 
 ```ts
-export type CurrencyCode = "USD" | "JPY" | "EUR" | "CNY";
+export type CurrencyCode =
+  | "USD" | "JPY" | "EUR" | "CNH" | "THB" | "SGD" | "IDR" | "HKD";
 
 export interface CurrencyConfig {
   code: CurrencyCode;
@@ -537,6 +542,8 @@ export interface CurrencyConfig {
   defaultTelegraphicSpreadRate: number;
 }
 ```
+
+> 통화 설정은 `shared/config/currencies.ts`에 정의한다.
 
 ## 9.2 환전 계산 입력 타입
 
@@ -645,21 +652,26 @@ KB-ParkHyewon-fx-helper/
     ├── pages/
     │   └── dashboard/
     ├── widgets/
-    │   ├── exchange-panel/
-    │   ├── remittance-panel/
+    │   ├── calculation-panel/
     │   └── transaction-history-panel/
     ├── features/
     │   ├── calculate-exchange/
     │   ├── calculate-remittance/
+    │   ├── load-exchange-rate/
     │   ├── add-transaction/
-    │   └── search-transaction/
+    │   ├── search-transaction/
+    │   └── toggle-theme/
     ├── entities/
-    │   ├── currency/
     │   ├── rate/
     │   ├── remittance/
-    │   └── transaction/
+    │   ├── transaction/
+    │   └── exchange-rate/
     └── shared/
         ├── lib/
+        ├── ui/
+        ├── config/
+        │   └── currencies.ts
+        └── api/
         ├── ui/
         ├── config/
         └── api/

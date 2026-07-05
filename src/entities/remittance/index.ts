@@ -2,6 +2,7 @@ export { calculateRemittance } from './model/calculateRemittance'
 export {
   CABLE_FEE,
   calculateRemittanceFee,
+  resolveUsdEquivalentAmount,
   validateCableFeeAmount,
   validateRemittanceFeeAmount,
 } from './model/remittanceFees'

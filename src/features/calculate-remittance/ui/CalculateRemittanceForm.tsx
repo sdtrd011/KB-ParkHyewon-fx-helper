@@ -2,13 +2,21 @@ import { useState, type ComponentType } from 'react'
 import type { CurrencyCode } from '@/shared/config'
 import {
   CURRENCY_OPTIONS,
+  DEFAULT_USD_BASE_RATE_NOTICE,
   formatCurrencyUnitLabel,
   getCurrencyConfig,
   isHundredUnitCurrency,
 } from '@/shared/config'
 import { calculateRemittance, type RemittanceCalculationResult } from '@/entities/remittance'
 import type { TransactionCalculationSnapshot } from '@/entities/transaction'
-import { formatForeignAmount, formatKrw, formatPercent, formatRate } from '@/shared/lib'
+import {
+  formatForeignAmount,
+  formatKrw,
+  formatPercent,
+  formatRate,
+  formatUsdEquivalent,
+  parseNumber,
+} from '@/shared/lib'
 import { Button, Card, Input, Select } from '@/shared/ui'
 
 type RateInputSource = 'manual' | 'api'
@@ -17,7 +25,13 @@ export interface RemittanceRateLoaderProps {
   currencyCode: CurrencyCode | ''
   onLoaded: (
     rate: number,
-    meta: { quotedDate: string; unit: 1 | 100; isPreviousBusinessDay: boolean },
+    meta: {
+      quotedDate: string
+      unit: 1 | 100
+      isPreviousBusinessDay: boolean
+      usdBaseRate: number
+      usdBaseRateFromApi: boolean
+    },
   ) => void
   onSourceChange: (source: RateInputSource) => void
   onError: (message: string) => void
@@ -48,42 +62,38 @@ interface CalculateRemittanceFormProps {
   RateNotice: ComponentType<RemittanceRateNoticeProps>
 }
 
-function parseNumber(value: string): number | null {
-  if (value.trim() === '') {
-    return null
-  }
-
-  const parsed = Number(value)
-
-  if (Number.isNaN(parsed)) {
-    return null
-  }
-
-  return parsed
-}
-
 function RemittanceFeeGuide() {
   return (
     <div className="md:col-span-2">
-      <h3 className="mb-3 text-sm font-semibold text-slate-900">해외송금 수수료 안내</h3>
-      <div className="overflow-x-auto rounded-md border border-slate-200">
+      <h3 className="mb-3 text-sm font-semibold text-slate-900 dark:text-slate-100">해외송금 수수료 안내</h3>
+      <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+        송금수수료는 선택 통화 금액이 아니라 원화 환산 송금원금을 USD 매매기준율로 나눈 USD 상당액 기준으로
+        산정합니다.
+      </p>
+      <div className="overflow-x-auto rounded-md border border-slate-200 dark:border-slate-700">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50">
+          <thead className="bg-slate-50 dark:bg-slate-800">
             <tr>
-              <th className="px-3 py-2 text-left font-medium text-slate-700">송금 금액 기준</th>
-              <th className="px-3 py-2 text-right font-medium text-slate-700">송금수수료</th>
+              <th className="px-3 py-2 text-left font-medium text-slate-700 dark:text-slate-300">
+                송금 금액 기준
+              </th>
+              <th className="px-3 py-2 text-right font-medium text-slate-700 dark:text-slate-300">
+                송금수수료
+              </th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100 bg-white">
+          <tbody className="divide-y divide-slate-100 bg-white dark:divide-slate-700 dark:bg-slate-900">
             {REMITTANCE_FEE_ROWS.map((row) => (
               <tr key={row.criteria}>
-                <td className="px-3 py-2 text-slate-700">{row.criteria}</td>
-                <td className="px-3 py-2 text-right text-slate-900">{row.fee}</td>
+                <td className="px-3 py-2 text-slate-700 dark:text-slate-300">{row.criteria}</td>
+                <td className="px-3 py-2 text-right text-slate-900 dark:text-slate-100">{row.fee}</td>
               </tr>
             ))}
             <tr>
-              <td className="px-3 py-2 font-medium text-slate-700">전신료</td>
-              <td className="px-3 py-2 text-right font-medium text-slate-900">건당 8,000원</td>
+              <td className="px-3 py-2 font-medium text-slate-700 dark:text-slate-300">전신료</td>
+              <td className="px-3 py-2 text-right font-medium text-slate-900 dark:text-slate-100">
+                건당 8,000원
+              </td>
             </tr>
           </tbody>
         </table>
@@ -108,6 +118,8 @@ export function CalculateRemittanceForm({
   const [telegraphicSpreadRate, setTelegraphicSpreadRate] = useState('')
   const [preferentialRate, setPreferentialRate] = useState('')
   const [foreignAmount, setForeignAmount] = useState('')
+  const [usdBaseRate, setUsdBaseRate] = useState<number | null>(null)
+  const [usdBaseRateFromApi, setUsdBaseRateFromApi] = useState(false)
   const [errorMessage, setErrorMessage] = useState('')
   const [result, setResult] = useState<RemittanceCalculationResult | null>(null)
 
@@ -124,6 +136,8 @@ export function CalculateRemittanceForm({
     setIsPreviousBusinessDay(false)
     setRateUnit(nextCurrency ? getCurrencyConfig(nextCurrency).unit : 1)
     setTelegraphicSellingRate('')
+    setUsdBaseRate(null)
+    setUsdBaseRateFromApi(false)
 
     if (nextCurrency) {
       const config = getCurrencyConfig(nextCurrency)
@@ -174,6 +188,9 @@ export function CalculateRemittanceForm({
         telegraphicSpreadRate: parsedTelegraphicSpreadRate,
         preferentialRate: parsedPreferentialRate,
         foreignAmount: parsedForeignAmount,
+        ...(usdBaseRate !== null
+          ? { usdBaseRate, usdBaseRateFromApi }
+          : {}),
       })
 
       setResult(calculationResult)
@@ -214,6 +231,8 @@ export function CalculateRemittanceForm({
             setRateSource('manual')
             setQuotedDate('')
             setIsPreviousBusinessDay(false)
+            setUsdBaseRate(null)
+            setUsdBaseRateFromApi(false)
           }}
         />
         <div className="flex items-end">
@@ -224,13 +243,15 @@ export function CalculateRemittanceForm({
               setQuotedDate(meta.quotedDate)
               setRateUnit(meta.unit)
               setIsPreviousBusinessDay(meta.isPreviousBusinessDay)
+              setUsdBaseRate(meta.usdBaseRate)
+              setUsdBaseRateFromApi(meta.usdBaseRateFromApi)
             }}
             onSourceChange={setRateSource}
             onError={setApiErrorMessage}
           />
         </div>
         {currencyCode && isHundredUnitCurrency(currencyCode) && (
-          <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800 md:col-span-2">
+          <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200 md:col-span-2">
             {currencyCode}는 {formatCurrencyUnitLabel(currencyCode)} 고시환율 기준으로 계산됩니다.
           </p>
         )}
@@ -242,7 +263,7 @@ export function CalculateRemittanceForm({
           unit={rateUnit}
         />
         {apiErrorMessage && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 md:col-span-2" role="status">
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200 md:col-span-2" role="status">
             {apiErrorMessage} 전신환매도율을 직접 입력한 뒤 계산을 계속할 수 있습니다.
           </p>
         )}
@@ -252,6 +273,7 @@ export function CalculateRemittanceForm({
           type="number"
           step="0.01"
           min="0"
+          max="100"
           placeholder="예: 1.0"
           value={telegraphicSpreadRate}
           onChange={(event) => setTelegraphicSpreadRate(event.target.value)}
@@ -280,7 +302,7 @@ export function CalculateRemittanceForm({
         <RemittanceFeeGuide />
       </div>
       {errorMessage && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300" role="alert">
           {errorMessage}
         </p>
       )}
@@ -292,34 +314,47 @@ export function CalculateRemittanceForm({
     <Card title="해외송금 비용 결과">
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-slate-500">전신환 적용환율</dt>
-          <dd className="font-medium text-slate-900">{formatRate(result.appliedRate)}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">전신환 적용환율</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatRate(result.appliedRate)}</dd>
         </div>
         <div>
-          <dt className="text-slate-500">원화 환산 송금원금</dt>
-          <dd className="font-medium text-slate-900">{formatKrw(result.convertedKrwAmount)}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">원화 환산 송금원금</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatKrw(result.convertedKrwAmount)}</dd>
         </div>
         <div>
-          <dt className="text-slate-500">송금수수료</dt>
-          <dd className="font-medium text-slate-900">{formatKrw(result.remittanceFee)}</dd>
-        </div>
-        <div>
-          <dt className="text-slate-500">전신료</dt>
-          <dd className="font-medium text-slate-900">{formatKrw(result.cableFee)}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">송금수수료</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatKrw(result.remittanceFee)}</dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-slate-500">총 출금액</dt>
-          <dd className="text-lg font-semibold text-blue-700">{formatKrw(result.totalKrwCost)}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">수수료 산정 기준</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">
+            {formatUsdEquivalent(result.usdEquivalentAmount)}
+          </dd>
+        </div>
+        {!result.usdBaseRateFromApi && (
+          <div className="sm:col-span-2">
+            <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200">
+              {DEFAULT_USD_BASE_RATE_NOTICE}
+            </p>
+          </div>
+        )}
+        <div>
+          <dt className="text-slate-500 dark:text-slate-400">전신료</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatKrw(result.cableFee)}</dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-slate-500">송금 외화 금액</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-slate-500 dark:text-slate-400">총 출금액</dt>
+          <dd className="text-lg font-semibold text-blue-700 dark:text-blue-400">{formatKrw(result.totalKrwCost)}</dd>
+        </div>
+        <div className="sm:col-span-2">
+          <dt className="text-slate-500 dark:text-slate-400">송금 외화 금액</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">
             {formatForeignAmount(Number(foreignAmount), result.currencyCode)}
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">우대율</dt>
-          <dd className="font-medium text-slate-900">{formatPercent(Number(preferentialRate))}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">우대율</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatPercent(Number(preferentialRate))}</dd>
         </div>
       </dl>
     </Card>

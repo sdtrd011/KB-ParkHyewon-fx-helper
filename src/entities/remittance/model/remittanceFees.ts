@@ -1,4 +1,4 @@
-import type { RemittanceCurrencyCode } from './types'
+import { DEFAULT_USD_BASE_RATE } from '@/shared/config'
 
 export const CABLE_FEE = 8_000
 
@@ -35,12 +35,12 @@ export function validateCableFeeAmount(fee: number): void {
 }
 
 export function resolveUsdEquivalentAmount(
-  currencyCode: RemittanceCurrencyCode,
-  foreignAmount: number,
+  convertedKrwAmount: number,
+  usdBaseRate: number = DEFAULT_USD_BASE_RATE,
 ): number {
-  if (currencyCode === 'USD') {
-    return foreignAmount
+  if (usdBaseRate <= 0) {
+    throw new Error('USD 매매기준율은 0보다 커야 합니다.')
   }
 
-  return foreignAmount
+  return convertedKrwAmount / usdBaseRate
 }

@@ -1,5 +1,15 @@
 import { CURRENCY_CONFIGS, getCurrencyConfig } from '@/shared/config'
-import { percentToDecimal, roundToInteger, roundToTwoDecimals } from '@/shared/lib'
+import {
+  CASH_SELL_NON_POSITIVE_APPLIED_RATE_MESSAGE,
+  isPercentInRange,
+  isPositiveAmount,
+  PREFERENTIAL_RATE_RANGE_MESSAGE,
+  percentToDecimal,
+  roundToInteger,
+  roundToTwoDecimals,
+  SPREAD_RATE_RANGE_MESSAGE,
+  wouldCashSellAppliedRateBeNonPositive,
+} from '@/shared/lib'
 import type {
   ExchangeCalculationInput,
   ExchangeCalculationResult,
@@ -28,24 +38,35 @@ function validateExchangeInput(input: ExchangeCalculationInput): void {
     throw new Error('스프레드율을 입력해주세요.')
   }
 
-  if (input.spreadRate < 0) {
-    throw new Error('스프레드율은 0% 이상이어야 합니다.')
+  if (!isPercentInRange(input.spreadRate)) {
+    throw new Error(SPREAD_RATE_RANGE_MESSAGE)
   }
 
   if (isInvalidNumber(input.preferentialRate)) {
     throw new Error('우대율을 입력해주세요.')
   }
 
-  if (input.preferentialRate < 0 || input.preferentialRate > 100) {
-    throw new Error('우대율은 0% 이상 100% 이하로 입력해주세요.')
+  if (!isPercentInRange(input.preferentialRate)) {
+    throw new Error(PREFERENTIAL_RATE_RANGE_MESSAGE)
   }
 
   if (isInvalidNumber(input.foreignAmount)) {
     throw new Error('외화 금액을 입력해주세요.')
   }
 
-  if (input.foreignAmount <= 0) {
+  if (!isPositiveAmount(input.foreignAmount)) {
     throw new Error('외화 금액은 0보다 커야 합니다.')
+  }
+
+  if (
+    input.transactionType === 'CASH_SELL' &&
+    wouldCashSellAppliedRateBeNonPositive(
+      input.baseRate,
+      input.spreadRate,
+      input.preferentialRate,
+    )
+  ) {
+    throw new Error(CASH_SELL_NON_POSITIVE_APPLIED_RATE_MESSAGE)
   }
 }
 

@@ -12,7 +12,7 @@ import {
   type ExchangeTransactionType,
 } from '@/entities/rate'
 import type { TransactionCalculationSnapshot } from '@/entities/transaction'
-import { formatForeignAmount, formatKrw, formatPercent, formatRate } from '@/shared/lib'
+import { formatForeignAmount, formatKrw, formatPercent, formatRate, parseNumber } from '@/shared/lib'
 import { Button, Card, Input, Select } from '@/shared/ui'
 
 type RateInputSource = 'manual' | 'api'
@@ -52,20 +52,6 @@ interface CalculateExchangeFormProps {
   onSnapshotChange?: (snapshot: TransactionCalculationSnapshot | null) => void
   RateLoader: ComponentType<ExchangeRateLoaderProps>
   RateNotice: ComponentType<ExchangeRateNoticeProps>
-}
-
-function parseNumber(value: string): number | null {
-  if (value.trim() === '') {
-    return null
-  }
-
-  const parsed = Number(value)
-
-  if (Number.isNaN(parsed)) {
-    return null
-  }
-
-  return parsed
 }
 
 export function CalculateExchangeForm({
@@ -187,7 +173,7 @@ export function CalculateExchangeForm({
           options={[...TRANSACTION_TYPE_OPTIONS]}
         />
         {currencyCode && isHundredUnitCurrency(currencyCode) && (
-          <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800 md:col-span-2">
+          <p className="rounded-md bg-blue-50 px-3 py-2 text-sm text-blue-800 dark:bg-blue-950 dark:text-blue-200 md:col-span-2">
             {currencyCode}는 {formatCurrencyUnitLabel(currencyCode)} 고시환율 기준으로 계산됩니다.
           </p>
         )}
@@ -227,7 +213,7 @@ export function CalculateExchangeForm({
           unit={rateUnit}
         />
         {apiErrorMessage && (
-          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 md:col-span-2" role="status">
+          <p className="rounded-md bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-200 md:col-span-2" role="status">
             {apiErrorMessage} 매매기준율을 직접 입력한 뒤 계산을 계속할 수 있습니다.
           </p>
         )}
@@ -237,6 +223,7 @@ export function CalculateExchangeForm({
           type="number"
           step="0.01"
           min="0"
+          max="100"
           placeholder="예: 1.75"
           value={spreadRate}
           onChange={(event) => setSpreadRate(event.target.value)}
@@ -264,7 +251,7 @@ export function CalculateExchangeForm({
         />
       </div>
       {errorMessage && (
-        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+        <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300" role="alert">
           {errorMessage}
         </p>
       )}
@@ -276,34 +263,34 @@ export function CalculateExchangeForm({
     <Card title="환전 계산 결과">
       <dl className="grid gap-3 text-sm sm:grid-cols-2">
         <div>
-          <dt className="text-slate-500">거래 구분</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-slate-500 dark:text-slate-400">거래 구분</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">
             {TRANSACTION_LABELS[result.transactionType]}
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">통화 단위</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-slate-500 dark:text-slate-400">통화 단위</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">
             {formatCurrencyUnitLabel(result.currencyCode)}
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">적용환율</dt>
-          <dd className="font-medium text-slate-900">{formatRate(result.appliedRate)}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">적용환율</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatRate(result.appliedRate)}</dd>
         </div>
         <div>
-          <dt className="text-slate-500">원화 금액</dt>
-          <dd className="font-medium text-blue-700">{formatKrw(result.krwAmount)}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">원화 금액</dt>
+          <dd className="font-medium text-blue-700 dark:text-blue-400">{formatKrw(result.krwAmount)}</dd>
         </div>
         <div className="sm:col-span-2">
-          <dt className="text-slate-500">외화 금액</dt>
-          <dd className="font-medium text-slate-900">
+          <dt className="text-slate-500 dark:text-slate-400">외화 금액</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">
             {formatForeignAmount(Number(foreignAmount), result.currencyCode)}
           </dd>
         </div>
         <div>
-          <dt className="text-slate-500">우대율</dt>
-          <dd className="font-medium text-slate-900">{formatPercent(Number(preferentialRate))}</dd>
+          <dt className="text-slate-500 dark:text-slate-400">우대율</dt>
+          <dd className="font-medium text-slate-900 dark:text-slate-100">{formatPercent(Number(preferentialRate))}</dd>
         </div>
       </dl>
     </Card>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { loadExchangeRateQuote } from '@/entities/exchange-rate'
+import { loadRemittanceExchangeRates } from '@/entities/exchange-rate'
 import type { CurrencyCode } from '@/shared/config'
 import { Button } from '@/shared/ui'
 
@@ -10,7 +10,13 @@ interface LoadRemittanceRateButtonProps {
   disabled?: boolean
   onLoaded: (
     rate: number,
-    meta: { quotedDate: string; unit: 1 | 100; isPreviousBusinessDay: boolean },
+    meta: {
+      quotedDate: string
+      unit: 1 | 100
+      isPreviousBusinessDay: boolean
+      usdBaseRate: number
+      usdBaseRateFromApi: boolean
+    },
   ) => void
   onSourceChange: (source: RemittanceRateInputSource) => void
   onError: (message: string) => void
@@ -35,11 +41,13 @@ export function LoadRemittanceRateButton({
     onError('')
 
     try {
-      const quote = await loadExchangeRateQuote(currencyCode)
-      onLoaded(quote.telegraphicSellingRate, {
-        quotedDate: quote.quotedDate,
-        unit: quote.unit,
-        isPreviousBusinessDay: quote.isPreviousBusinessDay,
+      const rates = await loadRemittanceExchangeRates(currencyCode)
+      onLoaded(rates.telegraphicSellingRate, {
+        quotedDate: rates.quotedDate,
+        unit: rates.unit,
+        isPreviousBusinessDay: rates.isPreviousBusinessDay,
+        usdBaseRate: rates.usdBaseRate,
+        usdBaseRateFromApi: rates.usdBaseRateFromApi,
       })
       onSourceChange('api')
     } catch (error) {

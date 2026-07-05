@@ -1,5 +1,13 @@
-import { CURRENCY_CONFIGS, getCurrencyConfig } from '@/shared/config'
-import { percentToDecimal, roundToInteger, roundToTwoDecimals } from '@/shared/lib'
+import { CURRENCY_CONFIGS, DEFAULT_USD_BASE_RATE, getCurrencyConfig } from '@/shared/config'
+import {
+  isPercentInRange,
+  isPositiveAmount,
+  PREFERENTIAL_RATE_RANGE_MESSAGE,
+  percentToDecimal,
+  roundToInteger,
+  roundToTwoDecimals,
+  SPREAD_RATE_RANGE_MESSAGE,
+} from '@/shared/lib'
 import {
   CABLE_FEE,
   calculateRemittanceFee,
@@ -25,7 +33,7 @@ function validateRemittanceInput(input: RemittanceCalculationInput): void {
     throw new Error('송금 외화 금액을 입력해주세요.')
   }
 
-  if (input.foreignAmount <= 0) {
+  if (!isPositiveAmount(input.foreignAmount)) {
     throw new Error('송금 외화 금액은 0보다 커야 합니다.')
   }
 
@@ -33,7 +41,7 @@ function validateRemittanceInput(input: RemittanceCalculationInput): void {
     throw new Error('전신환매도율을 입력해주세요.')
   }
 
-  if (input.telegraphicSellingRate <= 0) {
+  if (!isPositiveAmount(input.telegraphicSellingRate)) {
     throw new Error('전신환매도율은 0보다 커야 합니다.')
   }
 
@@ -41,16 +49,20 @@ function validateRemittanceInput(input: RemittanceCalculationInput): void {
     throw new Error('전신환 스프레드율을 입력해주세요.')
   }
 
-  if (input.telegraphicSpreadRate < 0) {
-    throw new Error('전신환 스프레드율은 0% 이상이어야 합니다.')
+  if (!isPercentInRange(input.telegraphicSpreadRate)) {
+    throw new Error(SPREAD_RATE_RANGE_MESSAGE)
   }
 
   if (isInvalidNumber(input.preferentialRate)) {
     throw new Error('우대율을 입력해주세요.')
   }
 
-  if (input.preferentialRate < 0 || input.preferentialRate > 100) {
-    throw new Error('우대율은 0% 이상 100% 이하로 입력해주세요.')
+  if (!isPercentInRange(input.preferentialRate)) {
+    throw new Error(PREFERENTIAL_RATE_RANGE_MESSAGE)
+  }
+
+  if (input.usdBaseRate !== undefined && !isPositiveAmount(input.usdBaseRate)) {
+    throw new Error('USD 매매기준율은 0보다 커야 합니다.')
   }
 }
 
@@ -67,7 +79,9 @@ export function calculateRemittance(
   const appliedRate = roundToTwoDecimals(rawAppliedRate)
   const currencyUnit = getCurrencyConfig(input.currencyCode).unit
   const convertedKrwAmount = roundToInteger((input.foreignAmount / currencyUnit) * appliedRate)
-  const usdEquivalentAmount = resolveUsdEquivalentAmount(input.currencyCode, input.foreignAmount)
+  const usdBaseRate = input.usdBaseRate ?? DEFAULT_USD_BASE_RATE
+  const usdBaseRateFromApi = input.usdBaseRateFromApi ?? false
+  const usdEquivalentAmount = resolveUsdEquivalentAmount(convertedKrwAmount, usdBaseRate)
   const remittanceFee = calculateRemittanceFee(usdEquivalentAmount)
   const cableFee = CABLE_FEE
   const totalKrwCost = convertedKrwAmount + remittanceFee + cableFee
@@ -76,6 +90,9 @@ export function calculateRemittance(
     currencyCode: input.currencyCode,
     appliedRate,
     convertedKrwAmount,
+    usdEquivalentAmount,
+    usdBaseRate,
+    usdBaseRateFromApi,
     remittanceFee,
     cableFee,
     totalKrwCost,

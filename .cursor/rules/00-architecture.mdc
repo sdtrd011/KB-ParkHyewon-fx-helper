@@ -68,7 +68,7 @@ entities → shared
 
 ```ts
 import { DashboardPage } from "@/pages/dashboard";
-import { ExchangePanel } from "@/widgets/exchange-panel";
+import { CalculationPanel } from "@/widgets/calculation-panel";
 import { calculateExchange } from "@/entities/rate";
 import { formatKrw } from "@/shared/lib";
 ```
@@ -83,13 +83,13 @@ import { formatKrw } from "@/shared/lib";
 
 ```ts
 // shared에서는 entities/features/widgets/pages/app import 금지
-import { CurrencyCode } from "@/entities/currency";
+import { calculateExchange } from "@/entities/rate";
 
 // entities에서는 features/widgets/pages/app import 금지
 import { CalculateExchangeForm } from "@/features/calculate-exchange";
 
 // features에서는 widgets/pages/app import 금지
-import { ExchangePanel } from "@/widgets/exchange-panel";
+import { CalculationPanel } from "@/widgets/calculation-panel";
 
 // widgets에서는 pages/app import 금지
 import { DashboardPage } from "@/pages/dashboard";
@@ -120,14 +120,14 @@ import { TransactionHistoryPanel } from "@/widgets/transaction-history-panel";
 
 ```ts
 import { calculateExchange } from "@/entities/rate";
-import { ExchangePanel } from "@/widgets/exchange-panel";
+import { CalculationPanel } from "@/widgets/calculation-panel";
 ```
 
 금지:
 
 ```ts
 import { calculateExchange } from "@/entities/rate/model/calculateExchange";
-import { ExchangePanel } from "@/widgets/exchange-panel/ui/ExchangePanel";
+import { CalculationPanel } from "@/widgets/calculation-panel/ui/CalculationPanel";
 ```
 
 ---
